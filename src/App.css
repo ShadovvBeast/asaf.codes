@@ -1,4 +1,4 @@
-/* App.css */
+/* styles.css */
 body, html, #root, .App {
   margin: 0;
   padding: 0;
@@ -11,7 +11,7 @@ canvas {
   display: block;
 }
 
-.overlay {
+.overlay, .loading-screen {
   position: absolute;
   top: 0;
   left: 0;
@@ -20,7 +20,7 @@ canvas {
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: rgba(0, 0, 0, 0.8);
+  background-color: #000;
   z-index: 1;
 }
 
@@ -31,4 +31,42 @@ canvas {
   background-color: #333;
   border: none;
   cursor: pointer;
+}
+
+.loading-screen {
+  flex-direction: column;
+  color: #fff;
+}
+
+.spinner {
+  border: 8px solid #333;
+  border-top: 8px solid #fff;
+  border-radius: 50%;
+  width: 80px;
+  height: 80px;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.captions {
+  position: absolute;
+  bottom: 10%;
+  width: 100%;
+  text-align: center;
+  font-size: 2rem;
+  color: #fff;
+  text-shadow: 2px 2px 4px #000;
+}
+
+.captions span {
+  margin: 0 0.2rem;
+}
+
+.captions .highlight {
+  color: #ff0;
+  font-weight: bold;
 }

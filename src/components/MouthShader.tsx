@@ -1,16 +1,16 @@
 // src/components/MouthShader.tsx
-import React, { useRef, useEffect } from 'react';
+import React, { useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Mesh, ShaderMaterial } from 'three';
-import meSpeak, { initializeMeSpeak } from '../utils/mespeakLoader';
-import { generateText, initializeLLM } from '../utils/TextGenerator';
 
-const MouthShader: React.FC<{ start: boolean }> = ({ start }) => {
+interface MouthShaderProps {
+	audioAnalyzer: AnalyserNode | null;
+}
+
+const MouthShader: React.FC<MouthShaderProps> = ({ audioAnalyzer }) => {
 	const meshRef = useRef<Mesh>(null);
-	const audioAnalyzerRef = useRef<AnalyserNode | null>(null);
-	const { viewport, size } = useThree();
+	const { size } = useThree();
 
-	// Create the ShaderMaterial with uniforms and shaders
 	const shaderMaterial = useRef(
 		new ShaderMaterial({
 			uniforms: {
@@ -139,114 +139,12 @@ const MouthShader: React.FC<{ start: boolean }> = ({ start }) => {
 		})
 	).current;
 
-	// Update the uResolution uniform on resize
-	useEffect(() => {
-		const handleResize = () => {
-			shaderMaterial.uniforms.uResolution.value = [window.innerWidth, window.innerHeight];
-		};
-		window.addEventListener('resize', handleResize);
-		return () => {
-			window.removeEventListener('resize', handleResize);
-		};
-	}, [shaderMaterial]);
-
-	// useEffect(() => {
-	// 	// Initialize audio context and analyzer
-	// 	const audio = new Audio('/audio/voice.mp3');
-	// 	audio.crossOrigin = 'anonymous';
-	// 	audio.loop = true;
-	//
-	// 	const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-	// 	const source = audioContext.createMediaElementSource(audio);
-	// 	const analyzer = audioContext.createAnalyser();
-	// 	analyzer.fftSize = 1024;
-	//
-	// 	source.connect(analyzer);
-	// 	analyzer.connect(audioContext.destination);
-	//
-	// 	audioAnalyzerRef.current = analyzer;
-	//
-	// 	// Play audio
-	// 	audio.play().catch((error) => {
-	// 		console.error('Audio playback failed:', error);
-	// 	});
-	//
-	// 	return () => {
-	// 		audio.pause();
-	// 		audioContext.close();
-	// 	};
-	// }, []);
-
-	useEffect(() => {
-		if (!start) return;
-
-		const run = async () => {
-			// Initialize meSpeak
-			await initializeMeSpeak();
-
-			// Initialize LLM
-			await initializeLLM();
-
-			// Generate text using LLM
-			const text = await generateText('Generate an ominous message.');
-
-			const options = {
-				amplitude: 100,
-				wordgap: 0,
-				pitch: 30,
-				speed: 80,
-				variant: 'm3',
-				rawdata: 'ArrayBuffer',
-			};
-
-			// Generate audio data
-			const audioData = meSpeak.speak(text, options) as ArrayBuffer;
-
-			if (audioData && audioData.byteLength > 0) {
-				const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-
-				audioContext.decodeAudioData(
-					audioData,
-					(decodedData) => {
-						const source = audioContext.createBufferSource();
-						source.buffer = decodedData;
-
-						const analyzer = audioContext.createAnalyser();
-						analyzer.fftSize = 1024;
-
-						source.connect(analyzer);
-						analyzer.connect(audioContext.destination);
-
-						audioAnalyzerRef.current = analyzer;
-
-						// Start playback
-						source.start();
-
-						// Cleanup
-						return () => {
-							source.stop();
-							audioContext.close();
-						};
-					},
-					(error) => {
-						console.error('Error decoding audio data:', error);
-					}
-				);
-			} else {
-				console.error('Failed to generate audio data with meSpeak.');
-			}
-		};
-
-		run();
-	}, [start]);
-
-
 	useFrame((state, delta) => {
 		shaderMaterial.uniforms.uTime.value += delta;
 
-		if (audioAnalyzerRef.current) {
-			const dataArray = new Uint8Array(audioAnalyzerRef.current.frequencyBinCount);
-			audioAnalyzerRef.current.getByteFrequencyData(dataArray);
+		if (audioAnalyzer) {
+			const dataArray = new Uint8Array(audioAnalyzer.frequencyBinCount);
+			audioAnalyzer.getByteFrequencyData(dataArray);
 
 			// Divide frequency data into bands
 			const bassRange = dataArray.slice(0, dataArray.length / 4);

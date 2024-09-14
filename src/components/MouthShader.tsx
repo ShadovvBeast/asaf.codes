@@ -3,8 +3,9 @@ import React, { useRef, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Mesh, ShaderMaterial } from 'three';
 import meSpeak, { initializeMeSpeak } from '../utils/mespeakLoader';
+import { generateText, initializeLLM } from '../utils/TextGenerator';
 
-const MouthShader: React.FC = () => {
+const MouthShader: React.FC<{ start: boolean }> = ({ start }) => {
 	const meshRef = useRef<Mesh>(null);
 	const audioAnalyzerRef = useRef<AnalyserNode | null>(null);
 	const { viewport, size } = useThree();
@@ -176,6 +177,70 @@ const MouthShader: React.FC = () => {
 	// 	};
 	// }, []);
 
+	useEffect(() => {
+		if (!start) return;
+
+		const run = async () => {
+			// Initialize meSpeak
+			await initializeMeSpeak();
+
+			// Initialize LLM
+			await initializeLLM();
+
+			// Generate text using LLM
+			const text = await generateText('Generate an ominous message.');
+
+			const options = {
+				amplitude: 100,
+				wordgap: 0,
+				pitch: 30,
+				speed: 80,
+				variant: 'm3',
+				rawdata: 'ArrayBuffer',
+			};
+
+			// Generate audio data
+			const audioData = meSpeak.speak(text, options) as ArrayBuffer;
+
+			if (audioData && audioData.byteLength > 0) {
+				const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+
+				audioContext.decodeAudioData(
+					audioData,
+					(decodedData) => {
+						const source = audioContext.createBufferSource();
+						source.buffer = decodedData;
+
+						const analyzer = audioContext.createAnalyser();
+						analyzer.fftSize = 1024;
+
+						source.connect(analyzer);
+						analyzer.connect(audioContext.destination);
+
+						audioAnalyzerRef.current = analyzer;
+
+						// Start playback
+						source.start();
+
+						// Cleanup
+						return () => {
+							source.stop();
+							audioContext.close();
+						};
+					},
+					(error) => {
+						console.error('Error decoding audio data:', error);
+					}
+				);
+			} else {
+				console.error('Failed to generate audio data with meSpeak.');
+			}
+		};
+
+		run();
+	}, [start]);
+
+
 	useFrame((state, delta) => {
 		shaderMaterial.uniforms.uTime.value += delta;
 
@@ -199,60 +264,6 @@ const MouthShader: React.FC = () => {
 			shaderMaterial.uniforms.uTreble.value = treble / 256;
 		}
 	});
-
-	useEffect(() => {
-		// Initialize meSpeak
-		initializeMeSpeak()
-			.then(() => {
-				// Generate speech audio data
-				const text = "Human, you are venturing into realms that you cannot comprehend, proceed at your own risk";
-				const settings = {
-					amplitude: 100,
-					wordgap: 5,
-					pitch: 20,
-					speed: 100,
-					variant: 'klatt',
-					rawdata: 'ArrayBuffer', // Correct property to get ArrayBuffer
-				};
-
-				// Generate audio data as a Float32Array
-				const audioData = meSpeak.speak(text, settings) as ArrayBuffer;
-
-				if (audioData && audioData.byteLength > 0) {
-					const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-
-					audioContext.decodeAudioData(audioData, (decodedData) => {
-						const source = audioContext.createBufferSource();
-						source.buffer = decodedData;
-
-						const analyzer = audioContext.createAnalyser();
-						analyzer.fftSize = 1024;
-
-						source.connect(analyzer);
-						analyzer.connect(audioContext.destination);
-
-						audioAnalyzerRef.current = analyzer;
-
-						// Start playback
-						source.start();
-
-						// Cleanup
-						return () => {
-							source.stop();
-							audioContext.close();
-						};
-					}, (error) => {
-						console.error('Error decoding audio data:', error);
-					});
-				} else {
-					console.error('Failed to generate audio data with meSpeak.');
-				}
-			})
-			.catch((error) => {
-				console.error('meSpeak initialization failed:', error);
-			});
-	}, []);
-
 
 	return (
 		<mesh ref={meshRef} material={shaderMaterial}>

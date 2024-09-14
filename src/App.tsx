@@ -22,7 +22,7 @@ function App() {
             )}
             {start && (
                 <Canvas>
-                    <MouthShader />
+                    <MouthShader start={start} />
                 </Canvas>
             )}
         </div>

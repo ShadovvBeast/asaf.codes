@@ -1,0 +1,36 @@
+/* App.css */
+.App {
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+}
+
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 100vw;
+  background: radial-gradient(circle at center, rgba(0,0,0,0.8), #000);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+}
+
+.start-button {
+  padding: 20px 40px;
+  font-size: 1.5em;
+  color: #fff;
+  background: none;
+  border: 2px solid #fff;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.start-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}

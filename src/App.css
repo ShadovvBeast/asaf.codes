@@ -1,36 +1,34 @@
 /* App.css */
-.App {
-  height: 100vh;
-  width: 100vw;
-  overflow: hidden;
+body, html, #root, .App {
   margin: 0;
   padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+canvas {
+  display: block;
 }
 
 .overlay {
-  position: fixed;
+  position: absolute;
   top: 0;
   left: 0;
-  height: 100vh;
-  width: 100vw;
-  background: radial-gradient(circle at center, rgba(0,0,0,0.8), #000);
+  width: 100%;
+  height: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 10;
+  background-color: rgba(0, 0, 0, 0.8);
+  z-index: 1;
 }
 
 .start-button {
-  padding: 20px 40px;
-  font-size: 1.5em;
+  padding: 1rem 2rem;
+  font-size: 1.5rem;
   color: #fff;
-  background: none;
-  border: 2px solid #fff;
-  border-radius: 5px;
+  background-color: #333;
+  border: none;
   cursor: pointer;
-  transition: background 0.3s;
-}
-
-.start-button:hover {
-  background: rgba(255, 255, 255, 0.1);
 }

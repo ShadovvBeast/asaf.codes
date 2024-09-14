@@ -1,8 +1,7 @@
+// src/App.tsx
 import React, { useState } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Environment } from '@react-three/drei';
-import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing';
-import Experience from './components/Experience';
+import MouthShader from './components/MouthShader';
 import './App.css';
 
 function App() {
@@ -22,23 +21,8 @@ function App() {
                 </div>
             )}
             {start && (
-                <Canvas camera={{ position: [0, 1.5, 3], fov: 45 }}>
-                    {/* Enhanced Lighting */}
-                    <ambientLight intensity={0} />
-                    <pointLight position={[-5, 5, 5]} intensity={0} />
-                    <spotLight position={[5, 5, 5]} intensity={0} angle={0.3} penumbra={1} />
-
-                    <Environment preset="sunset" />
-
-                    {/* Scene components */}
-                    <Experience />
-
-                    <EffectComposer>
-                        <Bloom intensity={0.1} luminanceThreshold={0.2} />
-                        <Vignette eskil={false} offset={0.1} darkness={1.4} />
-                    </EffectComposer>
-
-                    <OrbitControls enablePan={false} maxPolarAngle={Math.PI / 2} />
+                <Canvas>
+                    <MouthShader />
                 </Canvas>
             )}
         </div>

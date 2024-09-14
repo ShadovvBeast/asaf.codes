@@ -1,105 +1,71 @@
+// src/components/BackgroundAnimation.tsx
 import React, { useRef } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
-import { ShaderMaterial, Vector2 } from 'three';
+import { useFrame } from '@react-three/fiber';
+import { ShaderMaterial, Mesh } from 'three';
 
-type BackgroundProps = {
+interface BackgroundAnimationProps {
 	audioAnalyzer: AnalyserNode;
-};
-const vertexShader = `
-  varying vec2 vUv;
+}
 
-  void main() {
-    vUv = uv;
-    gl_Position = vec4(position.xy, 1.0, 1.0);
-  }
-`;
+const BackgroundAnimation: React.FC<BackgroundAnimationProps> = ({ audioAnalyzer }) => {
+	const meshRef = useRef<Mesh>(null);
 
-const fragmentShader = `
-  uniform float uTime;
-  uniform vec2 uResolution;
-  uniform float uAudioData;
-  varying vec2 vUv;
+	// Custom shader material
+	const shaderMaterial = new ShaderMaterial({
+		uniforms: {
+			time: { value: 0 },
+			amplitude: { value: 0 },
+		},
+		vertexShader: `
+      varying vec2 vUv;
 
-  float hash(vec2 p) {
-  	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
-  }
+      void main() {
+        vUv = uv;
+        vec3 pos = position;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+      }
+    `,
+		fragmentShader: `
+      uniform float time;
+      uniform float amplitude;
+      varying vec2 vUv;
 
-  float noise(vec2 p) {
-    vec2 i = floor(p);
-    vec2 f = fract(p);
-	
-    float a = hash(i);
-    float b = hash(i + vec2(1.0, 0.0));
-    float c = hash(i + vec2(0.0, 1.0));
-    float d = hash(i + vec2(1.0, 1.0));
-	
-    vec2 u = f * f * (3.0 - 2.0 * f);
-	
-    return mix(a, b, u.x) +
-  		 (c - a) * u.y * (1.0 - u.x) +
-  		 (d - b) * u.x * u.y;
-  }
+      void main() {
+        vec2 st = vUv;
+        vec3 color = vec3(0.0);
+        float pct = abs(sin(time + st.x * 10.0)) * amplitude;
+        color = mix(vec3(0.1, 0.0, 0.3), vec3(0.8, 0.0, 0.5), pct);
+        gl_FragColor = vec4(color, 1.0);
+      }
+    `,
+		transparent: true,
+		depthWrite: false,
+		depthTest: false,
+	});
 
-  // Fractal Brownian Motion
-  float fbm(vec2 st) {
-    float value = 0.0;
-    float amplitude = 0.5;
-    float frequency = 0.0;
-    for (int i = 0; i < 6; i++) {
-      value += amplitude * noise(st);
-      st *= 2.0;
-      amplitude *= 0.5;
-    }
-    return value;
-  }
-
-  void main() {
-    vec2 st = vUv * 3.0;
-    st += vec2(uTime * 0.05, uTime * 0.1);
-
-    float n = fbm(st + uAudioData * 2.0);
-    vec3 color = vec3(0.1, 0.0, 0.2) + vec3(0.5, 0.0, 0.7) * n;
-
-    gl_FragColor = vec4(color, 1.0);
-  }
-`;
-
-
-const BackgroundAnimation: React.FC<BackgroundProps> = ({ audioAnalyzer }) => {
-	const materialRef = useRef<ShaderMaterial>(null);
-	const { viewport, size } = useThree();
-
-	useFrame(({ clock }) => {
-		if (materialRef.current) {
-			const time = clock.getElapsedTime();
-			materialRef.current.uniforms.uTime.value = time;
-
-			// Get audio data
+	useFrame((state, delta) => {
+		if (audioAnalyzer) {
 			const dataArray = new Uint8Array(audioAnalyzer.frequencyBinCount);
 			audioAnalyzer.getByteFrequencyData(dataArray);
-			const averageFrequency = dataArray.reduce((a, b) => a + b) / dataArray.length;
 
-			// Update audio uniform
-			materialRef.current.uniforms.uAudioData.value = averageFrequency / 256;
+			// Calculate average amplitude
+			const avgAmplitude = dataArray.reduce((sum, value) => sum + value, 0) / dataArray.length;
+			const normalizedAmplitude = avgAmplitude / 256;
+
+			// Update uniforms
+			shaderMaterial.uniforms.time.value += delta;
+			shaderMaterial.uniforms.amplitude.value = normalizedAmplitude;
 		}
 	});
 
 	return (
-		<mesh scale={[viewport.width, viewport.height, 1]}  position={[0, 0, -5]} renderOrder={-1}>
-			<planeGeometry args={[2, 2]}/>
-			<shaderMaterial
-				ref={materialRef}
-				uniforms={{
-					uTime: { value: 0 },
-					uResolution: { value: new Vector2(size.width, size.height) },
-					uAudioData: { value: 0 },
-				}}
-				vertexShader={vertexShader}
-				fragmentShader={fragmentShader}
-				depthWrite={false}
-				depthTest={false}
-				transparent={true}
-			/>
+		<mesh
+			ref={meshRef}
+			position={[0, 0, -10]} // Position it behind other objects
+			renderOrder={-1} // Ensure it renders first
+		>
+			<planeGeometry args={[20, 20]} />
+			<primitive object={shaderMaterial} attach="material" />
 		</mesh>
 	);
 };
